@@ -3,6 +3,8 @@
 import pandas as pd
 import numpy as np
 from scipy.signal import argrelextrema
+import matplotlib.pyplot as plt
+plt.style.use('ggplot')
 
 from collections import namedtuple
 
@@ -40,6 +42,13 @@ def find_drawdowns(df, percentage_limit):
 
     return drawdowns
 
+def plot(df):
+    fig, ax = plt.subplots(nrows=2, sharex=True, figsize=(15,8))
+    ax[0].plot(df.index, df.Close)
+    ax[1].bar(df.index, df.Volume, width=1/(5*len(df.index)))
+
+    plt.show()
+
 if __name__ == "__main__":
     #the script was executed directly
 
@@ -55,3 +64,5 @@ if __name__ == "__main__":
 
     for d in drawdowns:
         print d
+
+    plot(df[0:20])
