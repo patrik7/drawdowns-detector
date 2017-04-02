@@ -21,11 +21,9 @@ def get_dataframe(file_name):
 
 
 def find_drawdowns(df, percentage_limit):
+    #this has disadvantage of detecting extra maximums for [1,3,3,2,2,1], similar problem for minimums, we need to compensate
     drawdown_start_indexes = deque(argrelextrema(df.Close.values, np.greater_equal)[0])
     drawdown_end_indexes = deque(argrelextrema(df.Close.values, np.less_equal)[0])
-    #this has disadvantage of detecting extra maximums for [1,3,3,2,2,1], similar problem for minimums, we need to compensate
-
-    #print drawdown_start_indexes
 
     drawdowns = []
 
@@ -56,8 +54,8 @@ def find_drawdowns(df, percentage_limit):
     return drawdowns
 
 
-def plot_drawdown(df, drawdown):
-    data = df[max(drawdown.start - 4, 0):min(drawdown.end + 4, len(df.index))]
+def plot_drawdown(df, drawdown, days_before=4, days_after=4):
+    data = df[max(drawdown.start - days_before, 0):min(drawdown.end + days_after, len(df.index))]
 
     fig = plt.figure(figsize=(15, 9))
 
