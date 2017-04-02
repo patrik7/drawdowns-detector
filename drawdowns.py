@@ -6,28 +6,23 @@ from scipy.signal import argrelextrema
 import matplotlib.pyplot as plt
 import matplotlib
 
-from collections import deque
-
-plt.style.use('ggplot')
-
+from collections import deque #dequeue allows O(1) popleft
 from collections import namedtuple
 
 import sys
 
 Drawdown = namedtuple('Drawdown', 'start end percentage')
 
-
+#assumes data formated same way as: http://chart.finance.yahoo.com/table.csv?s=^GSPC&a=0&b=3&c=1950&d=1&e=3&f=2017
 def get_dataframe(file_name):
     df = pd.read_csv(file_name, index_col='Date', parse_dates=True)
     return df.reindex(index=df.index[::-1])
 
 
 def find_drawdowns(df, percentage_limit):
-
-
     drawdown_start_indexes = deque(argrelextrema(df.Close.values, np.greater_equal)[0])
     drawdown_end_indexes = deque(argrelextrema(df.Close.values, np.less_equal)[0])
-    #this has disadvantage of detecting extra 2 maximums for [1,3,3,2,2,1], similar problem for minimums, we need to compensate
+    #this has disadvantage of detecting extra maximums for [1,3,3,2,2,1], similar problem for minimums, we need to compensate
 
     #print drawdown_start_indexes
 
@@ -60,7 +55,6 @@ def find_drawdowns(df, percentage_limit):
     return drawdowns
 
 
-
 def plot_drawdown(df, drawdown):
     data = df[max(drawdown.start - 4, 0):min(drawdown.end + 4, len(df.index))]
 
@@ -86,8 +80,13 @@ if __name__ == "__main__":
         print "Usage: %s <csv file> <percentage>" % sys.argv[0]
         sys.exit(1)
 
-    df = get_dataframe(sys.argv[1])
+    plt.style.use('ggplot')
+
+    #read command line arguments
+    csv_file = sys.argv[1]
     drawdown_limit = float(sys.argv[2])
+
+    df = get_dataframe(csv_file)
 
     drawdowns = find_drawdowns(df, drawdown_limit)
     drawdowns.sort(key=lambda x: x.percentage, reverse=True)
