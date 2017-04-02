@@ -6,6 +6,8 @@ from scipy.signal import argrelextrema
 import matplotlib.pyplot as plt
 import matplotlib
 
+from collections import deque
+
 plt.style.use('ggplot')
 
 from collections import namedtuple
@@ -21,30 +23,42 @@ def get_dataframe(file_name):
 
 
 def find_drawdowns(df, percentage_limit):
-    current_max_idx = 0
-    current_max_price = 0
 
-    last_price = 0
+
+    drawdown_start_indexes = deque(argrelextrema(df.Close.values, np.greater_equal)[0])
+    drawdown_end_indexes = deque(argrelextrema(df.Close.values, np.less_equal)[0])
+    #this has disadvantage of detecting extra 2 maximums for [1,3,3,2,2,1], similar problem for minimums, we need to compensate
+
+    #print drawdown_start_indexes
 
     drawdowns = []
 
-    for idx, price in enumerate(df['Close']):
-        if price > last_price:
-            if current_max_price > price:
-                #end of a drawdown
+    while drawdown_start_indexes and drawdown_end_indexes:
 
-                drawdown_percentage = 100 - 100*price/current_max_price
+        drowdown_start = drawdown_start_indexes.popleft()
 
-                if drawdown_percentage >= percentage_limit:
+        #compensate for extra minimums
+        while drawdown_end_indexes[0] <= drowdown_start:
+            drawdown_end_indexes.popleft()
+            if not drawdown_end_indexes:
+                return drawdowns
 
-                    drawdowns.append(Drawdown(current_max_idx, idx - 1, drawdown_percentage))
+        drowdown_end = drawdown_end_indexes.popleft()
 
-            current_max_idx = idx
-            current_max_price = price
+        #compensate for extra maximums
+        while drawdown_start_indexes[0] <= drowdown_end:
+            drawdown_start_indexes.popleft()
+            if not drawdown_start_indexes:
+                return drawdowns
 
-        last_price = price
+        drawdown_percentage = 100 - 100*df.iloc[drowdown_end].Close/df.iloc[drowdown_start].Close
+
+        if drawdown_percentage >= percentage_limit:
+
+            drawdowns.append(Drawdown(drowdown_start, drowdown_end, drawdown_percentage))
 
     return drawdowns
+
 
 
 def plot_drawdown(df, drawdown):
@@ -73,13 +87,13 @@ if __name__ == "__main__":
         sys.exit(1)
 
     df = get_dataframe(sys.argv[1])
-    drawdown_limit = int(sys.argv[2])
+    drawdown_limit = float(sys.argv[2])
 
     drawdowns = find_drawdowns(df, drawdown_limit)
     drawdowns.sort(key=lambda x: x.percentage, reverse=True)
 
     for d in drawdowns:
         print d
-        
+
     for d in drawdowns:
         plot_drawdown(df, d)
