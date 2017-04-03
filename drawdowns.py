@@ -12,7 +12,7 @@ from collections import namedtuple
 
 import sys
 
-Drawdown = namedtuple('Drawdown', 'start end percentage')
+Drawdown = namedtuple('Drawdown', 'start end percentage start_date end_date')
 
 #assumes data formated same way as: http://chart.finance.yahoo.com/table.csv?s=^GSPC&a=0&b=3&c=1950&d=1&e=3&f=2017
 def get_dataframe(file_name):
@@ -27,9 +27,16 @@ def find_drawdowns(df, percentage_limit):
 
     drawdowns = []
 
+    global_maximum_price = 0
+
     while drawdown_start_indexes and drawdown_end_indexes:
 
-        drowdown_start = drawdown_start_indexes.popleft()
+        local_maximum_idx = drawdown_start_indexes.popleft()
+
+        if df.iloc[local_maximum_idx].Close > global_maximum_price:
+            drowdown_start = local_maximum_idx
+            global_maximum_price = df.iloc[local_maximum_idx].Close
+
 
         #compensate for extra minimums
         while drawdown_end_indexes[0] <= drowdown_start:
@@ -45,16 +52,16 @@ def find_drawdowns(df, percentage_limit):
             if not drawdown_start_indexes:
                 return drawdowns
 
-        drawdown_percentage = 100 - 100*df.iloc[drowdown_end].Close/df.iloc[drowdown_start].Close
+        drawdown_percentage = 100 - 100*df.iloc[drowdown_end].Close/global_maximum_price
 
         if drawdown_percentage >= percentage_limit:
 
-            drawdowns.append(Drawdown(drowdown_start, drowdown_end, drawdown_percentage))
+            drawdowns.append(Drawdown(drowdown_start, drowdown_end, drawdown_percentage, df.index[drowdown_start], df.index[drowdown_end]))
 
     return drawdowns
 
 
-def plot_drawdown(df, drawdown, days_before=4, days_after=4):
+def plot_drawdown(df, drawdown, days_before=12, days_after=12):
     data = df[max(drawdown.start - days_before, 0):min(drawdown.end + days_after, len(df.index))]
 
     fig = plt.figure(figsize=(15, 9))
@@ -67,7 +74,7 @@ def plot_drawdown(df, drawdown, days_before=4, days_after=4):
 
     ax2 = ax.twinx()
     ax2.set_position(matplotlib.transforms.Bbox([[0.125,0.1],[0.9,0.32]]))
-    ax2.bar(data.index, data.Volume, 0.3, color='red')
+    ax2.bar(data.index, data.Volume, color='red')
 
     plt.show()
 
