@@ -25,6 +25,8 @@ def find_drawdowns(df, percentage_limit):
     drawdown_start_indexes = deque(argrelextrema(df.Close.values, np.greater_equal)[0])
     drawdown_end_indexes = deque(argrelextrema(df.Close.values, np.less_equal)[0])
 
+    #note: np.less or np.greater does not detect [2,3,3,2] as maximum as it looks at the learest neighbor only
+
     drawdowns = []
 
     global_maximum_price = 0
